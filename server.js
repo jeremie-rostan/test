@@ -91,19 +91,26 @@ function getGenreId(genre) {
   return genreMap[genre.toLowerCase()] || '';
 }
 
-// Use Claude to generate a recommendation based on mood
-async function generateRecommendationFromMood(mood, genre) {
+// Use Claude to generate recommendations based on mood
+async function generateRecommendationsFromMood(mood, genre) {
   try {
-    const prompt = `You are a movie recommendation expert. Based on the user's mood and feelings, suggest a specific movie or documentary title that would be perfect for them.
+    const prompt = `You are a movie recommendation expert. Based on the user's mood and feelings, suggest 5 specific movie or documentary titles that would be perfect for them.
 
 User's mood/feeling: "${mood}"
 ${genre ? `Preferred genre: ${genre}` : ''}
 
-Respond with ONLY the movie title (just the name, nothing else). Make sure it's a real, well-known movie or documentary.`;
+Respond with ONLY a numbered list of 5 movie titles (just the names, nothing else). Each on its own line. Make sure they're real, well-known movies or documentaries.
+
+Format:
+1. Movie Title
+2. Movie Title
+3. Movie Title
+4. Movie Title
+5. Movie Title`;
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
+      max_tokens: 200,
       messages: [
         {
           role: 'user',
@@ -112,10 +119,15 @@ Respond with ONLY the movie title (just the name, nothing else). Make sure it's 
       ],
     });
 
-    const movieTitle = message.content[0].text.trim().replace(/^['"]|['"]$/g, '');
-    return movieTitle;
+    const responseText = message.content[0].text.trim();
+    const movies = responseText
+      .split('\n')
+      .map((line) => line.replace(/^\d+\.\s*/, '').trim())
+      .filter((title) => title.length > 0);
+
+    return movies.slice(0, 5);
   } catch (error) {
-    console.error('Error generating recommendation:', error.message);
+    console.error('Error generating recommendations:', error.message);
     throw error;
   }
 }
@@ -190,62 +202,82 @@ app.post('/api/recommend', async (req, res) => {
       return res.status(400).json({ error: 'Mood is required' });
     }
 
-    // Step 1: Generate movie recommendation based on mood
-    console.log('Generating recommendation based on mood...');
-    const movieTitle = await generateRecommendationFromMood(mood, genre);
-    console.log('Recommended movie:', movieTitle);
+    // Step 1: Generate movie recommendations based on mood
+    console.log('Generating recommendations based on mood...');
+    const movieTitles = await generateRecommendationsFromMood(mood, genre);
+    console.log('Recommended movies:', movieTitles);
 
-    // Step 2: Search for the movie on TMDB
+    // Step 2: Search for movies on TMDB and collect details
     const filters = {};
     if (fromDate) filters.fromDate = fromDate;
     if (toDate) filters.toDate = toDate;
     if (genre) filters.genre = genre;
 
-    const searchResults = await searchMoviesOnTMDB(movieTitle, filters);
-    if (searchResults.length === 0) {
+    const recommendations = [];
+
+    for (const movieTitle of movieTitles) {
+      try {
+        const searchResults = await searchMoviesOnTMDB(movieTitle, filters);
+        if (searchResults.length === 0) {
+          console.log(`Movie "${movieTitle}" not found on TMDB, skipping...`);
+          continue;
+        }
+
+        const movie = searchResults[0];
+        const movieId = movie.id;
+
+        // Get detailed movie information
+        const movieDetails = await getMovieDetails(movieId);
+        if (!movieDetails) continue;
+
+        // Get reviews
+        const reviews = await getMovieReviews(movieId);
+
+        // Search for YouTube trailer
+        const trailerInfo = await searchYouTubeTrailer(movieTitle);
+
+        // Generate explanation
+        const explanation = await generateExplanation(movieTitle, mood);
+
+        // Format reviews
+        const formattedReviews = reviews.slice(0, 3).map((review) => ({
+          author: review.author,
+          content: review.content.substring(0, 200) + '...',
+          rating: review.author_details?.rating || null,
+          url: review.url,
+        }));
+
+        recommendations.push({
+          title: movieDetails.title || movieTitle,
+          releaseDate: movieDetails.release_date,
+          rating: movieDetails.vote_average,
+          summary: movieDetails.overview,
+          whyThisMovie: explanation,
+          reviews: formattedReviews,
+          trailerUrl: trailerInfo.searchUrl,
+          trailerEmbedUrl: trailerInfo.embeddedUrl,
+          imdbId: movieDetails.imdb_id,
+          posterUrl: movieDetails.poster_path
+            ? `https://image.tmdb.org/t/p/w500${movieDetails.poster_path}`
+            : null,
+        });
+
+        // Stop after getting 3-5 valid recommendations
+        if (recommendations.length >= 3) break;
+      } catch (error) {
+        console.error(`Error processing movie "${movieTitle}":`, error.message);
+        continue;
+      }
+    }
+
+    if (recommendations.length === 0) {
       return res.status(404).json({
-        error: 'Movie not found. Please try again.',
+        error: 'No movies found. Please try again with different filters.',
       });
     }
 
-    const movie = searchResults[0];
-    const movieId = movie.id;
-
-    // Step 3: Get detailed movie information
-    const movieDetails = await getMovieDetails(movieId);
-
-    // Step 4: Get reviews
-    const reviews = await getMovieReviews(movieId);
-
-    // Step 5: Search for YouTube trailer
-    const trailerInfo = await searchYouTubeTrailer(movieTitle);
-
-    // Step 6: Generate explanation
-    const explanation = await generateExplanation(movieTitle, mood);
-
-    // Format reviews
-    const formattedReviews = reviews.slice(0, 3).map((review) => ({
-      author: review.author,
-      content: review.content.substring(0, 200) + '...',
-      rating: review.author_details?.rating || null,
-      url: review.url,
-    }));
-
-    // Response
-    res.json({
-      title: movieDetails.title || movieTitle,
-      releaseDate: movieDetails.release_date,
-      rating: movieDetails.vote_average,
-      summary: movieDetails.overview,
-      whyThisMovie: explanation,
-      reviews: formattedReviews,
-      trailerUrl: trailerInfo.searchUrl,
-      trailerEmbedUrl: trailerInfo.embeddedUrl,
-      imdbId: movieDetails.imdb_id,
-      posterUrl: movieDetails.poster_path
-        ? `https://image.tmdb.org/t/p/w500${movieDetails.poster_path}`
-        : null,
-    });
+    // Return the first recommendation (user can request more if needed)
+    res.json(recommendations[0]);
   } catch (error) {
     console.error('Error in /api/recommend:', error);
     res.status(500).json({

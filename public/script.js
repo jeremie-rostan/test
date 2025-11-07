@@ -52,8 +52,11 @@ async function getRecommendation() {
     };
 
     if (dateCheckbox.checked) {
-      payload.fromDate = fromDateInput.value;
-      payload.toDate = toDateInput.value;
+      const from = fromDateInput.value;
+      const to = toDateInput.value;
+      // Ensure fromDate is earlier than toDate
+      payload.fromDate = from < to ? from : to;
+      payload.toDate = from < to ? to : from;
     }
 
     // Make API request
@@ -126,6 +129,15 @@ function displayResults(data) {
   setTimeout(() => {
     resultsSection.scrollIntoView({ behavior: 'smooth' });
   }, 100);
+}
+
+// Reset form for new recommendation
+function resetForNewRecommendation() {
+  form.style.display = 'block';
+  resultsSection.style.display = 'none';
+  errorSection.style.display = 'none';
+  loadingSection.style.display = 'none';
+  moodInput.focus();
 }
 
 // Display reviews
