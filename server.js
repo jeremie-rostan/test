@@ -102,7 +102,7 @@ ${genre ? `Preferred genre: ${genre}` : ''}
 Respond with ONLY the movie title (just the name, nothing else). Make sure it's a real, well-known movie or documentary.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 100,
       messages: [
         {
@@ -128,7 +128,7 @@ async function generateExplanation(movieTitle, mood) {
 Keep it concise and engaging.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       messages: [
         {
