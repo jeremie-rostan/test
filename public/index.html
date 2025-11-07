@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mood-Based Movie Recommender</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎬 How Do You Feel?</h1>
+      <p>Tell us your mood and we'll recommend the perfect movie</p>
+    </header>
+
+    <main>
+      <form id="recommendationForm">
+        <!-- Mood Input -->
+        <section class="form-section">
+          <label for="moodInput">How are you feeling?</label>
+          <textarea
+            id="moodInput"
+            placeholder="e.g., 'I'm feeling sad and lonely', 'I want something funny to cheer me up', 'I need an adrenaline rush'"
+            rows="4"
+            required
+          ></textarea>
+          <small>Be as descriptive as you'd like</small>
+        </section>
+
+        <!-- Date Range -->
+        <section class="form-section">
+          <label>
+            <input type="checkbox" id="dateCheckbox">
+            Prefer recent movies (last 5 years)?
+          </label>
+          <div id="dateRange" class="date-range" style="display: none;">
+            <label for="fromDate">From:</label>
+            <input type="date" id="fromDate">
+            <label for="toDate">To:</label>
+            <input type="date" id="toDate">
+          </div>
+        </section>
+
+        <!-- Genre Filter (optional) -->
+        <section class="form-section">
+          <label for="genreSelect">Preferred genre (optional):</label>
+          <select id="genreSelect">
+            <option value="">Any genre</option>
+            <option value="drama">Drama</option>
+            <option value="comedy">Comedy</option>
+            <option value="thriller">Thriller</option>
+            <option value="sci-fi">Sci-Fi</option>
+            <option value="horror">Horror</option>
+            <option value="romance">Romance</option>
+            <option value="documentary">Documentary</option>
+            <option value="action">Action</option>
+            <option value="animation">Animation</option>
+          </select>
+        </section>
+
+        <button type="submit" class="submit-btn">Get Recommendation</button>
+      </form>
+
+      <!-- Results Section -->
+      <section id="resultsSection" class="results-section" style="display: none;">
+        <div class="result-card">
+          <div class="result-header">
+            <h2 id="movieTitle"></h2>
+            <div class="metadata">
+              <span id="movieYear"></span>
+              <span id="movieRating"></span>
+            </div>
+          </div>
+
+          <!-- YouTube Trailer -->
+          <div class="trailer-container">
+            <iframe
+              id="trailerEmbed"
+              title="Movie Trailer"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen>
+            </iframe>
+          </div>
+
+          <!-- Movie Summary -->
+          <section class="summary-section">
+            <h3>Summary</h3>
+            <p id="movieSummary"></p>
+          </section>
+
+          <!-- Why This Movie -->
+          <section class="why-section">
+            <h3>Why We Think You'll Love It</h3>
+            <p id="whyThisMovie"></p>
+          </section>
+
+          <!-- Reviews -->
+          <section class="reviews-section">
+            <h3>What Critics Say</h3>
+            <div id="reviewsContainer"></div>
+          </section>
+
+          <!-- Actions -->
+          <div class="actions">
+            <a id="trailerLink" href="#" target="_blank" class="btn btn-secondary">Watch Trailer on YouTube</a>
+            <a id="imdbLink" href="#" target="_blank" class="btn btn-secondary">View on IMDb</a>
+            <button class="btn btn-primary" onclick="document.getElementById('recommendationForm').scrollIntoView({behavior: 'smooth'})">Get Another Recommendation</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Loading State -->
+      <section id="loadingSection" class="loading-section" style="display: none;">
+        <div class="spinner"></div>
+        <p>Finding the perfect movie for your mood...</p>
+      </section>
+
+      <!-- Error State -->
+      <section id="errorSection" class="error-section" style="display: none;">
+        <h3>Oops! Something went wrong</h3>
+        <p id="errorMessage"></p>
+        <button class="btn btn-primary" onclick="document.getElementById('recommendationForm').scrollIntoView({behavior: 'smooth'})">Try Again</button>
+      </section>
+    </main>
+
+    <footer>
+      <p>Powered by AI and The Movie Database</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

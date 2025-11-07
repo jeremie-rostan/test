@@ -1,0 +1,16 @@
+{
+  "name": "mood-movie-recommendation",
+  "version": "1.0.0",
+  "description": "A movie recommendation app based on user mood",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "anthropic": "^0.20.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  }
+}
